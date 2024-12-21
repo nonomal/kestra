@@ -12,11 +12,11 @@ import io.kestra.core.utils.TestsUtils;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.http.*;
 import io.micronaut.http.annotation.*;
-import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import io.micronaut.http.multipart.StreamingFileUpload;
 import io.micronaut.runtime.server.EmbeddedServer;
 import jakarta.inject.Inject;
 import org.apache.commons.io.IOUtils;
+import org.apache.hc.client5.http.ClientProtocolException;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
@@ -170,12 +170,13 @@ class RequestTest {
 
             RunContext runContext = TestsUtils.mockRunContext(this.runContextFactory, task, ImmutableMap.of());
 
-            HttpClientResponseException exception = assertThrows(
-                HttpClientResponseException.class,
+            ClientProtocolException exception = assertThrows(
+                ClientProtocolException.class,
                 () -> task.run(runContext)
             );
 
-            assertThat(exception.getResponse().getStatus().getCode(), is(417));
+            assertThat(exception.getCause(), instanceOf(HttpClientResponseException.class));
+            assertThat(((HttpClientResponseException) exception.getCause()).getResponse().getCode(), is(417));
         }
     }
 
@@ -188,8 +189,9 @@ class RequestTest {
             .type(RequestTest.class.getName())
             .uri(url)
             .allowFailed(true)
+            .headers(Map.of("bla", "sdfsdf"))
             .options(HttpInterface.RequestOptions.builder()
-                .readTimeout(Duration.ofSeconds(30))
+                .readIdleTimeout(Duration.ofSeconds(30))
                 .build())
             .sslOptions(AbstractHttp.SslOptions.builder().insecureTrustAllCertificates(true).build())
             .build();

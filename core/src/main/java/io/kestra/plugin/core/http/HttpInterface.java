@@ -41,6 +41,11 @@ public interface HttpInterface {
     Map<String, Object> getFormData();
 
     @Schema(
+        title = "If true, allow a failed response code (response code >= 400)"
+    )
+    Boolean getAllowFailed();
+
+    @Schema(
             title = "The request content type"
     )
     @PluginProperty(dynamic = true)
@@ -69,25 +74,25 @@ public interface HttpInterface {
         @PluginProperty
         private final Duration connectTimeout;
 
-        @Schema(title = "The maximum time allowed for reading data from the server before failing.")
-        @Builder.Default
-        @PluginProperty
-        private final Duration readTimeout = Duration.ofSeconds(HttpClientConfiguration.DEFAULT_READ_TIMEOUT_SECONDS);
+        @Deprecated
+        public void setReadTimeout(Duration readTimeout) {
+
+        }
 
         @Schema(title = "The time allowed for a read connection to remain idle before closing it.")
         @Builder.Default
         @PluginProperty
         private final Duration readIdleTimeout = Duration.of(HttpClientConfiguration.DEFAULT_READ_IDLE_TIMEOUT_MINUTES, ChronoUnit.MINUTES);
 
-        @Schema(title = "The time an idle connection can remain in the client's connection pool before being closed.")
-        @Builder.Default
-        @PluginProperty
-        private final Duration connectionPoolIdleTimeout = Duration.ofSeconds(HttpClientConfiguration.DEFAULT_CONNECTION_POOL_IDLE_TIMEOUT_SECONDS);
+        @Deprecated
+        public void setConnectionPoolIdleTimeout(Duration readTimeout) {
 
-        @Schema(title = "The maximum content length of the response.")
-        @Builder.Default
-        @PluginProperty
-        private final Integer maxContentLength = HttpClientConfiguration.DEFAULT_MAX_CONTENT_LENGTH;
+        }
+
+        @Deprecated
+        public void setMaxContentLength(Integer maxContentLength) {
+
+        }
 
         @Schema(title = "The type of proxy to use.")
         @Builder.Default
@@ -118,7 +123,7 @@ public interface HttpInterface {
         @Schema(title = "Whether redirects should be followed automatically.")
         @Builder.Default
         @PluginProperty
-        private final Boolean followRedirects = HttpClientConfiguration.DEFAULT_FOLLOW_REDIRECTS;
+        private final Boolean followRedirects = true;
 
         @Schema(title = "The log level for the HTTP client.")
         @PluginProperty

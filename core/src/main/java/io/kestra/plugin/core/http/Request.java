@@ -3,25 +3,27 @@ package io.kestra.plugin.core.http;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
-import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.common.EncryptedString;
 import io.kestra.core.runners.RunContext;
-import io.micronaut.core.type.Argument;
-import io.micronaut.http.HttpRequest;
-import io.micronaut.http.HttpResponse;
-import io.micronaut.http.client.HttpClient;
-import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.slf4j.Logger;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hc.client5.http.classic.methods.HttpUriRequest;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.protocol.HttpClientContext;
+import org.apache.hc.core5.http.NameValuePair;
 
+import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
-import java.util.List;
-import java.util.Map;
-import java.util.OptionalInt;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @SuperBuilder
 @ToString
@@ -276,71 +278,49 @@ import java.util.OptionalInt;
 public class Request extends AbstractHttp implements RunnableTask<Request.Output> {
     @Builder.Default
     @Schema(
-        title = "If true, allow a failed response code (response code >= 400)"
-    )
-    private boolean allowFailed = false;
-
-    @Builder.Default
-    @Schema(
         title = "If true, the HTTP response body will be automatically encrypted and decrypted in the outputs, provided that encryption is configured in your Kestra configuration.",
         description = "If this property is set to `true`, this task will output the request body using the `encryptedBody` output property; otherwise, the request body will be stored in the `body` output property."
     )
     private boolean encryptBody = false;
 
-    @SuppressWarnings("unchecked")
     public Output run(RunContext runContext) throws Exception {
-        Logger logger = runContext.logger();
+        try (CloseableHttpClient client = this.client(runContext)) {
+            Pair<HttpUriRequest, HttpClientContext> requestContext = this.request(runContext);
 
-        try (HttpClient client = this.client(runContext, this.method)) {
-            HttpRequest<String> request = this.request(runContext);
-            HttpResponse<String> response;
+            CloseableHttpResponse response = client.execute(requestContext.getLeft(), requestContext.getRight());
 
-            try {
-                response = client
-                    .toBlocking()
-                    .exchange(request, Argument.STRING, Argument.STRING);
+            String body = null;
 
-                // check that the string is a valid Unicode string
-                if (response.getBody().isPresent()) {
-                    OptionalInt illegalChar = response.body().chars().filter(c -> !Character.isDefined(c)).findFirst();
-                    if (illegalChar.isPresent()) {
-                        throw new IllegalArgumentException("Illegal unicode code point in request body: " + illegalChar.getAsInt() +
-                            ", the Request task only support valid Unicode strings as body.\n" +
-                            "You can try using the Download task instead.");
-                    }
-                }
-            } catch (HttpClientResponseException e) {
-                if (!allowFailed) {
-                    throw e;
-                }
-
-                //noinspection unchecked
-                response = (HttpResponse<String>) e.getResponse();
+            if (response.getEntity() != null) {
+                body = IOUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8);
             }
 
-            logger.debug("Request '{}' with the response code '{}'", request.getUri(), response.getStatus().getCode());
+            // check that the string is a valid Unicode string
+            if (body != null) {
+                OptionalInt illegalChar = body.chars().filter(c -> !Character.isDefined(c)).findFirst();
+                if (illegalChar.isPresent()) {
+                    throw new IllegalArgumentException("Illegal unicode code point in request body: " + illegalChar.getAsInt() +
+                        ", the Request task only support valid Unicode strings as body.\n" +
+                        "You can try using the Download task instead.");
+                }
+            }
 
-            return this.output(runContext, request, response);
+            return this.output(runContext, requestContext.getLeft(), response, body);
         }
     }
 
-    public Output output(RunContext runContext, HttpRequest<String> request, HttpResponse<String> response) throws GeneralSecurityException {
-        response
-            .getHeaders()
-            .contentLength()
-            .ifPresent(value -> {
-                runContext.metric(Counter.of(
-                    "response.length", value,
-                    this.tags(request, response)
-                ));
-            });
-
+    public Output output(RunContext runContext, HttpUriRequest request, CloseableHttpResponse response, String body) throws GeneralSecurityException, URISyntaxException, IOException {
         return Output.builder()
-            .code(response.getStatus().getCode())
-            .headers(response.getHeaders().asMap())
+            .code(response.getCode())
+            .headers(Arrays.stream(response.getHeaders())
+                .collect(Collectors.groupingBy(
+                    (header) -> header.getName().toLowerCase(Locale.ROOT),
+                    Collectors.mapping(NameValuePair::getValue, Collectors.toList())
+                ))
+            )
             .uri(request.getUri())
-            .body(encryptBody ? null : response.body())
-            .encryptedBody(encryptBody ? EncryptedString.from(response.body(), runContext) : null)
+            .body(encryptBody ? null : body)
+            .encryptedBody(encryptBody ? EncryptedString.from(body, runContext) : null)
             .build();
     }
 

@@ -15,6 +15,7 @@ import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import io.micronaut.runtime.server.EmbeddedServer;
 import jakarta.inject.Inject;
 import org.apache.commons.io.IOUtils;
+import org.apache.hc.client5.http.ClientProtocolException;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -111,12 +112,12 @@ class DownloadTest {
 
         RunContext runContext = TestsUtils.mockRunContext(this.runContextFactory, task, ImmutableMap.of());
 
-        HttpClientResponseException exception = assertThrows(
-            HttpClientResponseException.class,
+        ClientProtocolException exception = assertThrows(
+            ClientProtocolException.class,
             () -> task.run(runContext)
         );
 
-        assertThat(exception.getMessage(), is("Internal Server Error"));
+        assertThat(exception.getMessage(), is("Failed http request with response 500"));
     }
 
     @Test

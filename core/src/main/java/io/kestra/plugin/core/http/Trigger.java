@@ -9,6 +9,7 @@ import io.kestra.core.models.triggers.*;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.utils.TruthUtils;
 import io.micronaut.http.HttpMethod;
+import io.micronaut.http.MediaType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -114,7 +115,8 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
     private Map<String, Object> formData;
 
-    private String contentType;
+    @Builder.Default
+    private String contentType = MediaType.APPLICATION_JSON;;
 
     private Map<CharSequence, CharSequence> headers;
 
@@ -123,12 +125,14 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     private SslOptions sslOptions;
 
     @Builder.Default
+    private Boolean allowFailed = false;
+
+    @Builder.Default
     @Schema(
         title = "If true, the HTTP response body will be automatically encrypted and decrypted in the outputs if encryption is configured",
         description = "When true, the `encryptedBody` output will be filled, otherwise the `body` output will be filled"
     )
     private boolean encryptBody = false;
-
 
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {

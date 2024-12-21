@@ -4,17 +4,21 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
-import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
-import io.micronaut.reactor.http.client.ReactorStreamingHttpClient;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hc.client5.http.classic.methods.HttpUriRequest;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.protocol.HttpClientContext;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.NameValuePair;
 import org.slf4j.Logger;
 
 import java.io.BufferedOutputStream;
@@ -23,12 +27,12 @@ import java.io.FileOutputStream;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
-
-import static io.kestra.core.utils.Rethrow.throwFunction;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 @SuperBuilder
 @ToString
@@ -65,82 +69,45 @@ public class Download extends AbstractHttp implements RunnableTask<Download.Outp
     @PluginProperty
     private final Boolean failOnEmptyResponse = true;
 
-    @Builder.Default
-    @Schema(
-        title = "If true, allow a failed response code (response code >= 400)"
-    )
-    private boolean allowFailed = false;
-
     public Output run(RunContext runContext) throws Exception {
         Logger logger = runContext.logger();
         URI from = new URI(runContext.render(this.uri));
 
         File tempFile = runContext.workingDir().createTempFile(filenameFromURI(from)).toFile();
 
-        // output
-        Output.OutputBuilder builder = Output.builder();
-
-        // do it
         try (
-            ReactorStreamingHttpClient client = this.streamingClient(runContext, this.method);
+            CloseableHttpClient client = this.client(runContext);
             BufferedOutputStream output = new BufferedOutputStream(new FileOutputStream(tempFile));
         ) {
-            @SuppressWarnings("unchecked")
-            HttpRequest<String> request = this.request(runContext);
-            Long size;
+            Pair<HttpUriRequest, HttpClientContext> requestContext = this.request(runContext);
+            AtomicReference<Long> size = new AtomicReference<>();
 
-            try {
-                size = client
-                    .exchangeStream(request)
-                    .map(throwFunction(response -> {
-                        if (builder.code == null) {
-                            builder
-                                .code(response.code())
-                                .headers(response.getHeaders().asMap());
-                        }
-
-                        if (response.getBody().isPresent()) {
-                            byte[] bytes = response.getBody().get().toByteArray();
-                            output.write(bytes);
-
-                            return (long) bytes.length;
-                        } else {
-                            return 0L;
-                        }
-                    }))
-                    .reduce(Long::sum)
-                    .block();
-            } catch (HttpClientResponseException e) {
-                if (!allowFailed) {
-                    throw e;
-                } else {
-                    builder
-                        .headers(e.getResponse().getHeaders().asMap())
-                        .code(e.getResponse().getStatus().getCode());
-
-                    size = e.getResponse().getContentLength();
+            ClassicHttpResponse response = client.execute(
+                requestContext.getLeft(),
+                requestContext.getRight(),
+                r -> {
+                    if (r.getEntity() != null) {
+                        size.set(IOUtils.copyLarge(r.getEntity().getContent(), output));
+                    }
+                    return r;
                 }
+            );
+
+            if (size.get() == null) {
+                size.set(0L);
             }
 
-
-            if (size == null) {
-                size = 0L;
-            }
-
-            if (builder.headers != null && builder.headers.containsKey("Content-Length")) {
-                long length = Long.parseLong(builder.headers.get("Content-Length").getFirst());
-                if (length != size) {
+            if (response.getEntity() != null) {
+                long length = response.getEntity().getContentLength();
+                if (length != size.get()) {
                     throw new IllegalStateException("Invalid size, got " + size + ", expected " + length);
                 }
             }
 
             output.flush();
 
-            runContext.metric(Counter.of("response.length", size, this.tags(request, null)));
-            builder.length(size);
-
-            if (size == 0) {
-                if (this.failOnEmptyResponse && !this.allowFailed) {
+            if (size.get() == 0) {
+                if (this.failOnEmptyResponse && !this.getAllowFailed()) {
                     throw new HttpClientResponseException("No response from server", HttpResponse.status(HttpStatus.SERVICE_UNAVAILABLE));
                 } else {
                     logger.warn("File '{}' is empty", from);
@@ -148,19 +115,27 @@ public class Download extends AbstractHttp implements RunnableTask<Download.Outp
             }
 
             String filename = null;
-            if (builder.headers != null && builder.headers.containsKey("Content-Disposition")) {
-                String contentDisposition = builder.headers.get("Content-Disposition").getFirst();
+            if (response.getLastHeader("Content-Disposition") != null) {
+                String contentDisposition = response.getLastHeader("Content-Disposition").getValue();
                 filename = filenameFromHeader(runContext, contentDisposition);
             }
             if (filename != null) {
                 filename = URLEncoder.encode(filename, StandardCharsets.UTF_8);
             }
 
-            builder.uri(runContext.storage().putFile(tempFile, filename));
+            logger.debug("File '{}' downloaded with size '{}'", from, size);
 
-            logger.debug("File '{}' downloaded to '{}'", from, builder.uri);
-
-            return builder.build();
+            return Output.builder()
+                .code(response.getCode())
+                .uri(runContext.storage().putFile(tempFile, filename))
+                .headers(Arrays.stream(response.getHeaders())
+                    .collect(Collectors.groupingBy(
+                        (header) -> header.getName().toLowerCase(Locale.ROOT),
+                        Collectors.mapping(NameValuePair::getValue, Collectors.toList())
+                    ))
+                )
+                .length(size.get())
+                .build();
         }
     }
 
