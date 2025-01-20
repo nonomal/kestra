@@ -1,23 +1,34 @@
+/* stylelint-disable custom-property-pattern */
+/* stylelint-disable color-no-hex */
 @use 'sass:math';
 @use "sass:map";
 @use 'element-plus/theme-chalk/src/mixins/mixins' as *;
 @import "@kestra-io/ui-libs/src/scss/variables.scss";
-@import "../color-palette.scss";
+@import "@kestra-io/ui-libs/src/scss/color-palette.scss";
 
 // button
 .el-button {
-    &:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--error):not(.el-button--info) {
-        &:hover {
-            --el-button-hover-text-color: var(--ks-content-primary);
-            --el-button-hover-border-color: var(--ks-border-active);
-            --el-button-hover-background-color: var(--ks-background-button-secondary-hover);
-        }
+    &:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--error):not(.el-button--info), &--default {
+        --el-button-hover-text-color: var(--ks-content-primary);
+        --el-button-hover-border-color: var(--ks-border-primary);
+        --el-button-bg-color: var(--ks-button-background-secondary);
+        --el-button-hover-bg-color: var(--ks-button-background-secondary-hover);
+        --el-button-active-bg-color: var(--ks-button-background-secondary-active);
     }
 
-    &--default:hover {
-        --el-button-hover-text-color: var(--ks-content-primary);
-        --el-button-hover-border-color: var(--ks-border-active);
-        --el-button-hover-background-color: var(--ks-background-button-secondary-hover);
+    &.el-button--primary {
+        --el-button-text-color: var(--ks-button-content-primary);
+        --el-button-bg-color: var(--ks-button-background-primary);
+        --el-button-border-color: var(--ks-button-background-primary);
+        --el-button-hover-bg-color: var(--ks-button-background-primary-hover);
+        --el-button-active-bg-color: var(--ks-button-background-primary-active);
+    }
+
+    &.el-button--success {
+        --el-button-bg-color: var(--ks-button-background-success);
+        --el-button-border-color: var(--ks-button-background-success);
+        --el-button-hover-bg-color: var(--ks-button-background-success-hover);
+        --el-button-active-bg-color: var(--ks-button-background-success-active);
     }
 
     .el-input-group--append & [class*=el-icon] + span {
@@ -44,7 +55,7 @@
         &.version {
             --el-button-text-color: var(--ks-content-primary);
             --el-button-border-color: var(--ks-border-active);
-            --el-button-background-color: var(--ks-background-button-primary);
+            --el-button-background-color: var(--ks-button-background-primary);
         }
     }
 
@@ -97,15 +108,19 @@
     }
 }
 
-
 .el-input-file.custom-upload {
     font-size: var(--el-font-size-base);
     border-radius: var(--el-border-radius-base);
     border: 1px solid var(--ks-border-primary);
     white-space: nowrap;
 
+    form {
+        line-height: 27px;
+    }
+
     .el-input__wrapper {
         background-color: transparent;
+        box-shadow: none;
     }
 
     label {
@@ -129,7 +144,7 @@
 
     &:hover {
         border-color: var(--ks-border-active);
-        background-color: var(--ks-background-button-primary-hover);
+        background-color: var(--ks-button-background-primary-hover);
         outline: none;
     }
 
@@ -172,17 +187,27 @@
 }
 
 .el-select__popper {
+    // icon for selection of items in multiple choices
+    .el-select-dropdown.is-multiple .el-select-dropdown__item.is-selected::after{
+        background-color: var(--ks-select-active-icon);
+        mask: no-repeat url(data:image/svg+xml,%3Csvg%20width%3D%2214%22%20height%3D%2211%22%20viewBox%3D%220%200%2014%2011%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5.00035%2010.6134L0.860352%206.47342L2.74702%204.58675L5.00035%206.84675L11.587%200.253418L13.4737%202.14008L5.00035%2010.6134Z%22%20fill%3D%22%23BBBBFF%22%2F%3E%3C%2Fsvg%3E);
+        mask-size: 100% 100%;
+        -webkit-mask: no-repeat url(data:image/svg+xml,%3Csvg%20width%3D%2214%22%20height%3D%2211%22%20viewBox%3D%220%200%2014%2011%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5.00035%2010.6134L0.860352%206.47342L2.74702%204.58675L5.00035%206.84675L11.587%200.253418L13.4737%202.14008L5.00035%2010.6134Z%22%20fill%3D%22%23BBBBFF%22%2F%3E%3C%2Fsvg%3E);
+        -webkit-mask-size: 100% 100%;
+        right: 1rem;
+    }
+
     .el-select-dropdown__item {
         border-radius: var(--bs-border-radius);
         margin: 0 0.6rem 1px;
 
         &.is-selected {
-            background-color: var(--bs-gray-200);
+            background-color: var(--ks-select-active);
             color: var(--ks-content-primary);
         }
 
         &.is-hovering {
-            background-color: var(--bs-gray-300);
+            background-color: var(--ks-select-hover);
         }
     }
 }
@@ -219,12 +244,64 @@
 }
 
 .el-input-file {
+    .el-input__wrapper {
+        padding-left: 0;
+
+        input {
+            line-height: 1.5;
+        }
+    }
 
     .el-input__inner::file-selector-button {
-        background: var(--ks-background-button-primary);
+        background: var(--ks-button-background-primary);
         border: 0;
         margin: 2px 10px 0 4px;
         border-radius: var(--el-border-radius-base);
+    }
+
+    &.custom-upload {
+        font-size: var(--el-font-size-base);
+        border-radius: var(--el-border-radius-base);
+        border: 1px solid var(--ks-border-primary);
+        white-space: nowrap;
+
+        .el-input__wrapper {
+            background-color: transparent;
+        }
+
+        label {
+            display: flex;
+            cursor: pointer;
+            margin-left: 10px;
+            gap: .5rem;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        ::-webkit-file-upload-button {
+            display: none;
+        }
+
+        ::file-selector-button {
+            display: none;
+        }
+
+        &:hover {
+            border-color: var(--ks-border-active);
+            background-color: var(--ks-background-button-primary-hover);
+            outline: none;
+        }
+
+        &.el-input--large {
+            label {
+                margin-left: 19px;
+                line-height: 38px;
+                margin-right: 10px;
+                font-size: var(--bs-body-font-size);
+            }
+        }
     }
 }
 
@@ -285,13 +362,8 @@ form.ks-horizontal {
 
     --el-table-header-text-color: var(--ks-content-primary);
     --el-table-row-hover-bg-color: var(--bs-gray-200);
-    --el-table-header-bg-color: #f5f5ff;
-    --el-table-tr-bg-color: var(--bs-white);
-
-    html.dark & {
-        --el-table-tr-bg-color: var(--ks-background-card);
-        --el-table-header-bg-color: var(--ks-background-input);
-    }
+    --el-table-header-bg-color: var(--ks-background-table-header);
+    --el-table-tr-bg-color: var(--ks-background-card);
 
     outline: 1px solid var(--ks-border-primary);
     border-radius: var(--bs-border-radius-lg);
@@ -395,7 +467,7 @@ form.ks-horizontal {
 .el-tabs {
     .el-tabs__active-bar {
         height: 4px;
-        background-color: var(--ks-background-button-primary);
+        background-color: var(--ks-button-background-primary);
     }
 
     .el-tabs__item {
@@ -414,7 +486,6 @@ form.ks-horizontal {
 
         &.is-active > * {
             background-color: var(--ks-content-link);
-            font-weight: bold;
         }
 
         &.is-disabled a {
@@ -429,7 +500,7 @@ form.ks-horizontal {
 
     html.dark & {
         .el-tabs__active-bar {
-            background-color: var(--ks-background-button-secondary-active);
+            background-color: var(--ks-button-background-secondary-hover);
         }
 
         .el-tabs__item {
@@ -495,21 +566,17 @@ form.ks-horizontal {
                 padding: .5rem 1rem;
             }
 
+            a:hover{
+                color: var(--ks-content-link);
+            }
+
             &.is-active > a {
-                font-weight: bold;
-                background: var(--ks-background-button-secondary-active);
+                background: var(--ks-button-background-secondary-hover);
+                color: var(--ks-content-link);
                 border-radius: var(--bs-border-radius);
             }
         }
 
-
-        html.dark & {
-            .el-tabs__item {
-                &.is-active > a {
-                    color: var(--ks-content-primary);
-                }
-            }
-        }
     }
 
     &.el-tabs--card{
@@ -632,6 +699,10 @@ form.ks-horizontal {
             }
         }
     }
+
+    .el-popover__title {
+        color: var(--ks-content-primary);
+    }
 }
 
 // message box
@@ -720,13 +791,14 @@ form.ks-horizontal {
     .el-autocomplete-suggestion__wrap {
         max-height: 40vh;
     }
+
     li {
-        // highlight of keyboard selection
-        --el-fill-color-light: var(--ks-select-active);
+        // highlight of keyboard selection & element plus hover
+        --el-fill-color-light: var(--ks-select-hover);
         padding: 0 1rem;
 
         a {
-            color: var(--ks-select-active);
+            color: var(--ks-content-primary);
             justify-content: space-between;
         }
     }
@@ -810,13 +882,6 @@ form.ks-horizontal {
     }
 }
 
-// popover
-.el-popper {
-    .el-popover__title {
-        color: var(--ks-content-primary);
-    }
-}
-
 // loading
 .el-loading-mask {
     backdrop-filter: blur(3px) opacity(0.85);
@@ -862,6 +927,7 @@ form.ks-horizontal {
     @each $type in $types {
         &.el-alert--#{$type}.is-light {
             border: 1px solid var(--ks-border-#{$type});
+            background-color: var(--ks-background-#{$type});
             #{--el-color-#{$type}}: var(--ks-content-#{$type});
         }
     }
@@ -968,14 +1034,6 @@ form.ks-horizontal {
         }
     }
 
-    .el-dialog__headerbtn .el-dialog__close {
-        background-color: var(--ks-content-link);
-
-        html.dark & {
-            color: $base-white
-        }
-    }
-
     .bottom-buttons {
         margin-top: 36px;
         display: flex;
@@ -1057,19 +1115,16 @@ form.ks-horizontal {
     .el-step__head {
         &.is-process .el-step__icon {
             border-color: $base-white;
-        }
-        .el-step__icon {
-            border: 1px solid var(--ks-border-primary);
-            border-radius: 50%;
-            background-color: var(--ks-background-input);
-        }
-
-        &.is-process .el-step__icon {
             box-shadow: 0 1px 3px 0 #7614B880,
                         0 5px 5px 0 #7614B86E,
                         0 11px 7px 0 #7614B842,
                         0 20px 8px 0 #7614B814,
                         0 31px 9px 0 #7614B803;
+        }
+        .el-step__icon {
+            border: 1px solid var(--ks-border-primary);
+            border-radius: 50%;
+            background-color: var(--ks-background-input);
         }
 
         &.is-success .el-step__icon {
@@ -1122,4 +1177,8 @@ form.ks-horizontal {
 
 .text-base {
     font-size: var(--el-font-size-base);
+}
+
+.el-empty {
+    background-color: var(--ks-background-card);
 }

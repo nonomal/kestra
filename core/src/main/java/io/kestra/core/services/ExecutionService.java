@@ -3,6 +3,7 @@ package io.kestra.core.services;
 import io.kestra.core.events.CrudEvent;
 import io.kestra.core.events.CrudEventType;
 import io.kestra.core.exceptions.InternalException;
+import io.kestra.core.models.Label;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.executions.ExecutionKilled;
 import io.kestra.core.models.executions.ExecutionKilledExecution;
@@ -213,7 +214,11 @@ public class ExecutionService {
                 execution.withState(State.Type.RESTARTED).getState()
             );
 
-        newExecution = newExecution.withMetadata(execution.getMetadata().nextAttempt());
+        List<Label> newLabels = new ArrayList<>(execution.getLabels());
+        if (!newLabels.contains(new Label(Label.RESTARTED, "true"))) {
+            newLabels.add(new Label(Label.RESTARTED, "true"));
+        }
+        newExecution = newExecution.withMetadata(execution.getMetadata().nextAttempt()).withLabels(newLabels);
 
         return revision != null ? newExecution.withFlowRevision(revision) : newExecution;
     }
@@ -292,7 +297,11 @@ public class ExecutionService {
             taskRunId == null ? new State() : execution.withState(State.Type.RESTARTED).getState()
         );
 
-        newExecution = newExecution.withMetadata(execution.getMetadata().nextAttempt());
+        List<Label> newLabels = new ArrayList<>(execution.getLabels());
+        if (!newLabels.contains(new Label(Label.REPLAY, "true"))) {
+            newLabels.add(new Label(Label.REPLAY, "true"));
+        }
+        newExecution = newExecution.withMetadata(execution.getMetadata().nextAttempt()).withLabels(newLabels);
 
         return revision != null ? newExecution.withFlowRevision(revision) : newExecution;
     }

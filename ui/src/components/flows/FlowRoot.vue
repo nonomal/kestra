@@ -161,7 +161,7 @@
                     )
                 ) {
                     tabs.push({
-                        name: "editor",
+                        name: "edit",
                         component: FlowEditor,
                         title: this.$t("edit"),
                         containerClass: "full-container",

@@ -170,7 +170,7 @@
                     .filter(tab => (this.embedActiveTab ?? this.$route.params.tab) === tab.name)[0] || this.tabs[0];
             },
             isEditorActiveTab() {
-                return this.activeTab.name === "editor";
+                return this.activeTab.name === "edit";
             },
             isNamespaceEditor(){
                 return this.activeTab?.props?.isNamespace === true;

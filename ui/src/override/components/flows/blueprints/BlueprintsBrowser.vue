@@ -99,7 +99,7 @@
 
 <script>
     import DataTable from "../../../../components/layout/DataTable.vue";
-    import TaskIcon from "@kestra-io/ui-libs/src/components/misc/TaskIcon.vue";
+    import {TaskIcon} from "@kestra-io/ui-libs";
     import DataTableActions from "../../../../mixins/dataTableActions";
     import {shallowRef} from "vue";
     import ContentCopy from "vue-material-design-icons/ContentCopy.vue";
@@ -315,7 +315,7 @@
 </script>
 <style scoped lang="scss">
     @use 'element-plus/theme-chalk/src/mixins/mixins' as *;
-    @import "@kestra-io/ui-libs/src/scss/variables.scss";
+    @import "@kestra-io/ui-libs/src/scss/variables";
 
     .blueprint {
         display: flex;
@@ -336,22 +336,22 @@
 
         // Two elements => one element on each side
         &:has(> :nth-child(2)) {
-            margin: $spacer 0 calc(0.5 * var(--spacer)) 0;
+            margin: $spacer 0 .5rem 0;
 
             .el-card & {
                 // Enough space not to overlap with switch view when embedded
-                margin-top: calc(1.6 * var(--spacer));
+                margin-top: 1.6rem;
 
 
                 // Embedded tabs looks weird without cancelling the margin (this brings a top-left tabs with bottom-right search)
                 > :nth-child(1) {
-                    margin-top: calc(-1.5 * var(--spacer));
+                    margin-top: -1.5rem;
                 }
             }
 
             > :nth-last-child(1) {
                 margin-left: auto;
-                padding: calc(0.5 * var(--spacer)) 0;
+                padding: .5rem 0;
             }
         }
     }

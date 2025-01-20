@@ -115,10 +115,10 @@
     @use 'element-plus/theme-chalk/src/mixins/mixins' as *;
 
     .pagination {
-        margin-top: var(--spacer);
+        margin-top: 1rem;
 
         &.top {
-            margin-bottom: var(--spacer);
+            margin-bottom: 1rem;
             margin-top: 0;
         }
 

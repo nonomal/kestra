@@ -240,18 +240,18 @@
 
     .log-panel {
         > div.log-content {
-            margin-bottom: var(--spacer);
+            margin-bottom: 1rem;
             .navbar {
                 border: 1px solid var(--ks-border-primary);
             }
         }
 
         .logs-wrapper {
-            margin-bottom: var(--spacer);
+            margin-bottom: 1rem;
             border-radius: var(--bs-border-radius-lg);
             overflow: hidden;
             padding: $spacer;
-            padding-top: calc($spacer/2);
+            padding-top: .5rem;
             background-color: var(--ks-background-card);
             border: 1px solid var(--ks-border-primary);
 

@@ -152,7 +152,7 @@
 </script>
 
 <style scoped lang="scss">
-    @import "@kestra-io/ui-libs/src/scss/variables.scss";
+    @import "@kestra-io/ui-libs/src/scss/variables";
 
     .el-button.el-button--default {
         transition: none;
@@ -163,7 +163,7 @@
         }
 
         &:hover, &:focus {
-            background-color: var(--ks-background-button-secondary);
+            background-color: var(--ks-button-background-secondary);
         }
 
         &.success {
@@ -180,7 +180,7 @@
         }
 
         &.error {
-            border-color: var(--ks-border-failed);
+            border-color: var(--ks-border-error);
         }
     }
 

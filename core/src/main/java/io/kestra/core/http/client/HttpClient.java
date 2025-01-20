@@ -4,10 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.http.HttpRequest;
 import io.kestra.core.http.HttpResponse;
-import io.kestra.core.http.client.apache.FailedResponseInterceptor;
-import io.kestra.core.http.client.apache.LoggingRequestInterceptor;
-import io.kestra.core.http.client.apache.LoggingResponseInterceptor;
-import io.kestra.core.http.client.apache.RunContextResponseInterceptor;
+import io.kestra.core.http.client.apache.*;
 import io.kestra.core.http.client.configurations.HttpConfiguration;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
@@ -36,12 +33,15 @@ import org.apache.hc.core5.util.Timeout;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.SocketException;
+import java.net.*;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
+import java.util.List;
 import java.util.function.Consumer;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLHandshakeException;
 
 @Slf4j
 public class HttpClient implements Closeable {
@@ -87,30 +87,45 @@ public class HttpClient implements Closeable {
 
         // Timeout
         if (this.configuration.getTimeout() != null) {
-            if (this.configuration.getTimeout().getConnectTimeout() != null) {
-                connectionConfig.setConnectTimeout(Timeout.of(this.configuration.getTimeout().getConnectTimeout()));
-            }
+            var connectTiemout = runContext.render(this.configuration.getTimeout().getConnectTimeout()).as(Duration.class);
+            connectTiemout.ifPresent(duration -> connectionConfig.setConnectTimeout(Timeout.of(duration)));
 
-            if (this.configuration.getTimeout().getReadIdleTimeout() != null) {
-                connectionConfig.setSocketTimeout(Timeout.of(this.configuration.getTimeout().getReadIdleTimeout()));
-            }
+            var readIdleTiemout = runContext.render(this.configuration.getTimeout().getReadIdleTimeout()).as(Duration.class);
+            readIdleTiemout.ifPresent(duration -> connectionConfig.setSocketTimeout(Timeout.of(duration)));
         }
 
         // proxy
         if (this.configuration.getProxy() != null) {
-            // @TODO use CustomSocketFactory
+            SocketAddress proxyAddr = new InetSocketAddress(
+                runContext.render(configuration.getProxy().getAddress()).as(String.class).orElse(null),
+                runContext.render(configuration.getProxy().getPort()).as(Integer.class).orElse(null)
+            );
+
+            Proxy proxy = new Proxy(runContext.render(configuration.getProxy().getType()).as(Proxy.Type.class).orElse(null), proxyAddr);
+
+            builder.setProxySelector(new ProxySelector() {
+                @Override
+                public void connectFailed(URI uri, SocketAddress sa, IOException e) {
+                    /* ignore */
+                }
+
+                @Override
+                public List<Proxy> select(URI uri) {
+                    return List.of(proxy);
+                }
+            });
 
             if (this.configuration.getProxy().getUsername() != null && this.configuration.getProxy().getPassword() != null) {
                 builder.setProxyAuthenticationStrategy(new DefaultAuthenticationStrategy());
 
                 credentialsStore.setCredentials(
                     new AuthScope(
-                        runContext.render(this.configuration.getProxy().getAddress()),
-                        this.configuration.getProxy().getPort()
+                        runContext.render(this.configuration.getProxy().getAddress()).as(String.class).orElse(null),
+                        runContext.render(this.configuration.getProxy().getPort()).as(Integer.class).orElse(null)
                     ),
                     new UsernamePasswordCredentials(
-                        runContext.render(this.configuration.getProxy().getUsername()),
-                        runContext.render(this.configuration.getProxy().getPassword()).toCharArray()
+                        runContext.render(this.configuration.getProxy().getUsername()).as(String.class).orElseThrow(),
+                        runContext.render(this.configuration.getProxy().getPassword()).as(String.class).orElseThrow().toCharArray()
                     )
                 );
             }
@@ -125,15 +140,15 @@ public class HttpClient implements Closeable {
 
         // auth
         if (this.configuration.getAuth() != null) {
-            this.configuration.getAuth().configure(builder);
+            this.configuration.getAuth().configure(builder, runContext);
         }
 
         // root options
-        if (!this.configuration.getFollowRedirects()) {
+        if (!runContext.render(this.configuration.getFollowRedirects()).as(Boolean.class).orElseThrow()) {
             builder.disableRedirectHandling();
         }
 
-        if (!this.configuration.getAllowFailed()) {
+        if (!runContext.render(this.configuration.getAllowFailed()).as(Boolean.class).orElseThrow()) {
             builder.addResponseInterceptorLast(new FailedResponseInterceptor());
         }
 
@@ -227,17 +242,20 @@ public class HttpClient implements Closeable {
         return contextBuilder.build();
     }
 
-    @SuppressWarnings("resource")
     private <T> HttpResponse<T> request(
         HttpRequest request,
         HttpClientContext httpClientContext,
         HttpClientResponseHandler<HttpResponse<T>> responseHandler
-    ) throws HttpClientException, IllegalVariableEvaluationException {
+    ) throws HttpClientException {
         try {
             return this.client.execute(request.to(), httpClientContext, responseHandler);
         } catch (SocketException e) {
             throw new HttpClientRequestException(e.getMessage(), request, e);
         } catch (IOException e) {
+            if (e instanceof SSLHandshakeException) {
+                throw new HttpClientRequestException(e.getMessage(), request, e);
+            }
+
             if (e.getCause() instanceof HttpClientException httpClientException) {
                 throw httpClientException;
             }

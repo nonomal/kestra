@@ -31,7 +31,7 @@
                         :disabled="item.disabled"
                     >
                         <template #default>
-                            <status size="small" :label="false" class="me-1" :status="item.code" />
+                            <status size="small" :label="true" class="me-1" :status="item.code" />
                             <span v-html="item.label" />
                         </template>
                     </el-option>
@@ -67,7 +67,7 @@
     import {mapState} from "vuex";
     import permission from "../../models/permission";
     import action from "../../models/action";
-    import State from "../../utils/state";
+    import {State} from "@kestra-io/ui-libs"
     import Status from "../../components/Status.vue";
     import ExecutionUtils from "../../utils/executionUtils";
     import {shallowRef} from "vue";

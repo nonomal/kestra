@@ -6,7 +6,7 @@
 
 <script>
     import {mapGetters} from "vuex";
-    import {cssVariable} from "@kestra-io/ui-libs/src/utils/global";
+    import {cssVariable} from "@kestra-io/ui-libs";
 
     export default {
         computed: {

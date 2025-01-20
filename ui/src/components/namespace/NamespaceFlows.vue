@@ -67,6 +67,7 @@
                     class-name="row-graph"
                 >
                     <template #default="scope">
+                        <!-- TODO: Replace the usage of StateChart with one of the new chart components -->
                         <state-chart
                             :duration="true"
                             :namespace="scope.row.namespace"

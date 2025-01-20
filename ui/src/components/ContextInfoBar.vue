@@ -172,7 +172,7 @@
         top: 0;
         left: 0;
         z-index: 1040;
-        background-color: var(--ks-background-button-primary);
+        background-color: var(--ks-button-background-primary);
         opacity: 0;
         transition: opacity .1s;
         border: none;
@@ -238,7 +238,7 @@
             width: 10px;
             height: 10px;
             background-color: var(--content-alert);
-            border: 2px solid var(--ks-background-button-secondary);
+            border: 2px solid var(--ks-button-background-secondary);
             border-radius: 50%;
             display: block;
             position: absolute;
@@ -255,8 +255,8 @@
 
         .closeButton {
             position: fixed;
-            top: var(--spacer);
-            right: var(--spacer);
+            top: 1rem;
+            right: 1rem;
             color: var(--ks-content-tertiary);
             background: none;
             border: none;

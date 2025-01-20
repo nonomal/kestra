@@ -30,8 +30,8 @@
 
     .title {
         display: flex;
-        padding: var(--spacer);
-        padding-right: calc(var(--spacer) * 3);
+        padding: 1rem;
+        padding-right: 3rem;
         border-bottom: 1px solid var(--ks-border-primary);
 
         h2 {

@@ -5,7 +5,7 @@
 </template>
 
 <script>
-    import Markdown from "../../utils/markdown";
+    import * as Markdown from "../../utils/markdown";
 
     export default {
         props: {
@@ -101,9 +101,9 @@
         }
 
         .info {
-            background-color: var(--ks-background-information);
-            border: 1px solid var(--ks-border-information);
-            color: var(--ks-content-information);
+            background-color: var(--ks-background-info);
+            border: 1px solid var(--ks-border-info);
+            color: var(--ks-content-info);
             padding: 8px 16px;
             border-radius: var(--el-border-radius-base);
             margin-bottom: 1rem;

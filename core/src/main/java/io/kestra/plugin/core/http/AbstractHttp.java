@@ -5,6 +5,7 @@ import io.kestra.core.http.HttpRequest;
 import io.kestra.core.http.client.HttpClient;
 import io.kestra.core.http.client.configurations.HttpConfiguration;
 import io.kestra.core.http.client.configurations.SslOptions;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.Task;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
@@ -24,6 +25,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpHeaders;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.AbstractMap;
@@ -39,21 +41,21 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
-abstract public class AbstractHttp extends Task implements HttpInterface {
+public abstract class AbstractHttp extends Task implements HttpInterface {
     @NotNull
-    protected String uri;
+    protected Property<String> uri;
 
     @Builder.Default
-    protected String method = "GET";
+    protected Property<String> method = Property.of("GET");
 
-    protected String body;
+    protected Property<String> body;
 
-    protected Map<String, Object> formData;
+    protected Property<Map<String, Object>> formData;
 
     @Builder.Default
-    protected String contentType = "application/json";
+    protected Property<String> contentType = Property.of("application/json");
 
-    protected Map<CharSequence, CharSequence> headers;
+    protected Property<Map<CharSequence, CharSequence>> headers;
 
     protected HttpConfiguration options;
 
@@ -62,10 +64,10 @@ abstract public class AbstractHttp extends Task implements HttpInterface {
     @Schema(
         title = "If true, allow a failed response code (response code >= 400)"
     )
-    private boolean allowFailed = false;
+    private Property<Boolean> allowFailed = Property.of(false);
 
     @Deprecated
-    public void setAllowFailed(Boolean allowFailed) {
+    public void setAllowFailed(Property<Boolean> allowFailed) {
         if (this.options == null) {
             this.options = HttpConfiguration.builder()
                 .build();
@@ -102,14 +104,15 @@ abstract public class AbstractHttp extends Task implements HttpInterface {
     @SuppressWarnings({"unchecked", "rawtypes"})
     protected HttpRequest request(RunContext runContext) throws IllegalVariableEvaluationException, URISyntaxException, IOException {
         HttpRequest.HttpRequestBuilder request = HttpRequest.builder()
-            .method(this.method)
-            .uri(new URI(runContext.render(this.uri)));
+            .method(runContext.render(this.method).as(String.class).orElse(null))
+            .uri(new URI(runContext.render(this.uri).as(String.class).orElseThrow()));
 
-        if (this.formData != null) {
-            if ("multipart/form-data".equals(this.contentType)) {
+        var renderedFormData = runContext.render(this.formData).asMap(String.class, Object.class);
+        if (!renderedFormData.isEmpty()) {
+            if ("multipart/form-data".equals(runContext.render(this.contentType).as(String.class).orElse(null))) {
                 HashMap<String, Object> multipart = new HashMap<>();
 
-                for (Map.Entry<String, Object> e : this.formData.entrySet()) {
+                for (Map.Entry<String, Object> e : renderedFormData.entrySet()) {
                     String key = runContext.render(e.getKey());
 
                     if (e.getValue() instanceof String stringValue) {
@@ -146,22 +149,23 @@ abstract public class AbstractHttp extends Task implements HttpInterface {
                 request.body(HttpRequest.MultipartRequestBody.builder().content(multipart).build());
             } else {
                 request.body(HttpRequest.UrlEncodedRequestBody.builder()
-                    .content(runContext.render(this.formData))
+                    .content(renderedFormData)
                     .build()
                 );
             }
         } else if (this.body != null) {
             request.body(HttpRequest.StringRequestBody.builder()
-                .content(runContext.render(body))
-                .contentType(runContext.render(this.contentType))
-                .charset(this.options != null ? this.options.getDefaultCharset() : StandardCharsets.UTF_8)
+                .content(runContext.render(body).as(String.class).orElseThrow())
+                .contentType(runContext.render(this.contentType).as(String.class).orElse(null))
+                .charset(this.options != null ? runContext.render(this.options.getDefaultCharset()).as(Charset.class).orElse(null) : StandardCharsets.UTF_8)
                 .build()
             );
         }
 
-        if (this.headers != null) {
+        var renderedHeader = runContext.render(this.headers).asMap(CharSequence.class, CharSequence.class);
+        if (!renderedHeader.isEmpty()) {
             request.headers(HttpHeaders.of(
-                this.headers
+                renderedHeader
                     .entrySet()
                     .stream()
                     .map(throwFunction(e -> new AbstractMap.SimpleEntry<>(

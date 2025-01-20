@@ -248,7 +248,7 @@
     import VarValue from "../VarValue.vue";
     import SubFlowLink from "../../flows/SubFlowLink.vue";
 
-    import TaskIcon from "@kestra-io/ui-libs/src/components/misc/TaskIcon.vue";
+    import {TaskIcon} from "@kestra-io/ui-libs";
 
     import TimelineTextOutline from "vue-material-design-icons/TimelineTextOutline.vue";
     import TextBoxSearchOutline from "vue-material-design-icons/TextBoxSearchOutline.vue";
@@ -417,6 +417,8 @@
         const mapped = {};
 
         getTaskIcons(store.state.execution?.flow?.tasks || [], mapped);
+        getTaskIcons(store.state.execution?.flow?.errors || [], mapped);
+        getTaskIcons(store.state.execution?.flow?.finally || [], mapped);
 
         return mapped;
     });
@@ -462,7 +464,7 @@
         }
 
         &::-webkit-scrollbar-thumb {
-            background: var(--ks-background-button-primary);
+            background: var(--ks-button-background-primary);
             border-radius: 0px;
         }
     }

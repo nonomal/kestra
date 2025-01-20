@@ -28,6 +28,37 @@
             </el-alert>
         </div>
 
+        <div v-if="isRestarted()">
+            <el-alert type="warning" :closable="false" class="mb-4 main-warning">
+                <template #title>
+                    <div>
+                        <alert class="main-icon" />
+                        {{ $t('execution restarted', {nbRestart: execution?.metadata?.attemptNumber - 1}) }}
+                    </div>
+                </template>
+            </el-alert>
+        </div>
+
+        <div v-if="isReplayed()">
+            <el-alert type="info" :closable="false" class="mb-4 main-info">
+                <template #title>
+                    <div>
+                        {{ $t('execution replayed') }}
+                    </div>
+                </template>
+            </el-alert>
+        </div>
+
+        <div v-if="isReplay()">
+            <el-alert type="info" :closable="false" class="mb-4 main-info">
+                <template #title>
+                    <div>
+                        <span v-html="$t('execution replay', {originalId: execution?.originalId})" />
+                    </div>
+                </template>
+            </el-alert>
+        </div>
+
         <el-row class="mb-3">
             <el-col :span="12" class="crud-align">
                 <crud type="CREATE" permission="EXECUTION" :detail="{executionId: execution.id}" />
@@ -125,7 +156,7 @@
     import Unqueue from "./Unqueue.vue";
     import ForceRun from "./ForceRun.vue";
     import Kill from "./Kill.vue";
-    import State from "../../utils/state";
+    import {State} from "@kestra-io/ui-libs"
     import DateAgo from "../layout/DateAgo.vue";
     import Crud from "override/components/auth/Crud.vue";
     import Duration from "../layout/Duration.vue";
@@ -199,6 +230,15 @@
             },
             isFailed() {
                 return this.execution.state.current === State.FAILED;
+            },
+            isRestarted() {
+                return this.execution.labels?.find( it => it.key === "system.restarted" && (it.value === "true" || it.value === true)) !== undefined;
+            },
+            isReplayed() {
+                return this.execution.labels?.find( it => it.key === "system.replayed" && (it.value === "true" || it.value === true)) !== undefined;
+            },
+            isReplay() {
+                return this.execution.labels?.find( it => it.key === "system.replay" && (it.value === "true" || it.value === true)) !== undefined;
             },
             load() {
                 this.$store
@@ -341,7 +381,7 @@
         }
 
         &::-webkit-scrollbar-thumb {
-            background: var(--ks-background-button-primary);
+            background: var(--ks-button-background-primary);
             border-radius: 0px;
         }
     }
@@ -408,7 +448,7 @@
 }
 
 .el-alert.main-error {
-    background-color: var(--background-color-failed) !important;
+    background-color: var(--ks-background-error) !important;
     padding: 0.5rem;
 
     .el-button{
@@ -421,7 +461,7 @@
         font-weight: bold;
         position: relative;
         line-height: 2rem;
-        color: var(--content-color-failed) !important;
+        color: var(--ks-content-error) !important;
         font-size: var(--font-size-sm);
 
         span {

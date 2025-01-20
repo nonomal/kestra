@@ -39,6 +39,17 @@
                                         <small v-if="item.task && item.task.value"> {{ item.task.value }}</small>
                                     </span>
                                 </el-tooltip>
+                                <div>
+                                    <el-tooltip placement="right" :persistent="false" :hide-after="0" effect="light">
+                                        <template #content>
+                                            <span>This task has {{ item.attempts }} attempts.</span>
+                                        </template>
+                                        <Warning 
+                                            v-if="item.attempts > 1" 
+                                            class="attempt_warn me-3" 
+                                        />
+                                    </el-tooltip>
+                                </div>
                                 <div :style="'width: ' + (100 / (dates.length + 1)) * dates.length + '%'">
                                     <el-tooltip placement="top" :persistent="false" transition="" :hide-after="0" effect="light">
                                         <template #content>
@@ -84,7 +95,7 @@
 <script>
     import TaskRunDetails from "../logs/TaskRunDetails.vue";
     import {mapState} from "vuex";
-    import State from "../../utils/state";
+    import {State} from "@kestra-io/ui-libs"
     import Duration from "../layout/Duration.vue";
     import Utils from "../../utils/utils";
     import FlowUtils from "../../utils/flowUtils";
@@ -92,11 +103,13 @@
     import {DynamicScroller, DynamicScrollerItem} from "vue-virtual-scroller";
     import ChevronRight from "vue-material-design-icons/ChevronRight.vue";
     import ChevronDown from "vue-material-design-icons/ChevronDown.vue";
+    import Warning from "vue-material-design-icons/Alert.vue"
+
 
     const ts = date => new Date(date).getTime();
     const TASKRUN_THRESHOLD = 50
     export default {
-        components: {DynamicScroller, DynamicScrollerItem, TaskRunDetails, Duration, ChevronRight, ChevronDown},
+        components: {DynamicScroller,Warning, DynamicScrollerItem, TaskRunDetails, Duration, ChevronRight, ChevronDown},
         data() {
             return {
                 colors: State.colorClass(),
@@ -287,7 +300,8 @@
                         task,
                         flowId: task.flowId,
                         namespace: task.namespace,
-                        executionId: task.outputs && task.outputs.executionId
+                        executionId: task.outputs && task.outputs.executionId,
+                        attempts: task.attempts ? task.attempts.length : 1
                     });
                 }
                 this.series = series;
@@ -365,7 +379,7 @@
                 }
 
                 &::-webkit-scrollbar-thumb {
-                    background: var(--ks-background-button-primary);
+                    background: var(--ks-button-background-primary);
                 }
             }
 
@@ -396,6 +410,11 @@
                         color: var(--ks-content-primary);
                     }
                 }
+                
+                .attempt_warn{
+                    color: var(--el-color-warning);
+                    vertical-align: middle;
+                }
 
                 .task-progress {
                     position: relative;
@@ -422,7 +441,7 @@
 
     // To Separate through Line
     :deep(.vue-recycle-scroller__item-view) {
-        border-bottom: 2px solid var(--ks-border-primary);
+        border-bottom: 1px solid var(--ks-border-primary);
         margin-bottom: 10px;
 
         &:last-child {
@@ -437,23 +456,6 @@
     :deep(.log-wrapper) {
         > .vue-recycle-scroller__item-wrapper > .vue-recycle-scroller__item-view > div {
             border-radius: var(--bs-border-radius-lg);
-        }
-
-        .attempt-wrapper {
-            margin-bottom: 0;
-            border: 2px solid var(--ks-border-primary);
-
-            tbody:last-child & {
-                border-bottom: 2px solid var(--ks-border-primary);
-            }
-
-            .attempt-header {
-                padding: .5rem;
-            }
-
-            .line {
-                padding: .5rem;
-            }
         }
     }
 </style>

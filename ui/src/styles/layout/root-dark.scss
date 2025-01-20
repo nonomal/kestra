@@ -1,7 +1,9 @@
+/* stylelint-disable custom-property-pattern */
+/* stylelint-disable color-no-hex */
 @use 'sass:map';
 
-@import "@kestra-io/ui-libs/src/scss/theme-dark.scss";
-@import "@kestra-io/ui-libs/src/scss/variables.scss";
+@import "@kestra-io/ui-libs/src/scss/theme-dark";
+@import "@kestra-io/ui-libs/src/scss/variables";
 
 // Bootstrap
 @import "bootstrap/scss/functions";

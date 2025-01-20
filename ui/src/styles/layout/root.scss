@@ -1,9 +1,11 @@
+/* stylelint-disable custom-property-pattern */
+/* stylelint-disable color-no-hex */
 @use 'sass:map';
 @use 'sass:math';
 @use 'element-plus/theme-chalk/src/mixins/var' as *;
 
 @import "@kestra-io/ui-libs/src/scss/variables.scss";
-@import "../color-palette.scss";
+@import "@kestra-io/ui-libs/src/scss/color-palette.scss";
 
 // use bootstrap for main style
 :root {
@@ -13,9 +15,9 @@
 
     --el-text-color-primary: var(--ks-content-link);
     --el-text-color-regular: var(--ks-content-primary);
-    --el-text-color-secondary: var(--content-content-secondary);
-    --el-text-color-placeholder: var(--content-content-secondary);
-    --el-text-color-disabled: var(--content-content-inactive);
+    --el-text-color-secondary: var(--ks-content-secondary);
+    --el-text-color-placeholder: var(--ks-content-secondary);
+    --el-text-color-disabled: var(--ks-content-inactive);
 
     --el-border-color: var(--ks-border-primary);
     --el-border-color-light: var(--ks-border-primary);
@@ -33,10 +35,8 @@
     --el-fill-color-blank: $base-white;// used in many places --el-input-background-color
 
     // alert colors
-    --el-color-alert-info: var(--tooltip-content-information);
-    --el-color-alert-error: var(--executions-failed-content-failed);
-    @each $type in ("warning", "success", "danger") {
-        #{--el-color-alert-#{$type}}: var(--executions-#{$type}-content-#{$type});
+    @each $type in $types {
+        #{--el-color-alert-#{$type}}: var(--ks-content-#{$type});
     }
 
     --bs-code-color: $base-purple-600;
@@ -84,23 +84,23 @@
     #{--bs-warning-rgb}: to_rgb($content-warning);
     #{--bs-success-rgb}: to_rgb($content-success);
 
-    #{--bs-border-info}: var(--border-information);
-    #{--bs-border-running}: var(--border-running);
-    #{--bs-border-danger}: var(--border-failed);
-    #{--bs-border-warning}: var(--border-warning);
-    #{--bs-border-success}: var(--border-success);
+    #{--bs-border-info}: var(--ks-border-info);
+    #{--bs-border-running}: var(--ks-border-running);
+    #{--bs-border-danger}: var(--ks-border-error);
+    #{--bs-border-warning}: var(--ks-border-warning);
+    #{--bs-border-success}: var(--ks-border-success);
 }
 
 $logLevels: "trace", "debug", "info", "warn", "error";
 @each $logLevel in $logLevels {
     .log-border-#{$logLevel} {
-        border-color: var(--ks-border-#{$logLevel}) !important;
+        border-color: var(--ks-log-border-#{$logLevel}) !important;
     }
     .log-bg-#{$logLevel} {
-        background-color: var(--ks-background-#{$logLevel}) !important;
+        background-color: var(--ks-log-background-#{$logLevel}) !important;
     }
     .log-content-#{$logLevel} {
-        color: var(--ks-content-#{$logLevel}) !important;
+        color: var(--ks-log-content-#{$logLevel}) !important;
     }
 }
 
@@ -126,13 +126,13 @@ $logLevels: "trace", "debug", "info", "warn", "error";
     justify-content: end;
     max-height: 49.5px;
 
-    :deep(.validation) {
+    .validation {
         border: 0;
         padding-left: .5rem;
         padding-right: .5rem;
     }
 
-    :deep(.el-button) {
+    .el-button {
         border: 0;
         padding-left: .5rem;
         padding-right: .5rem;

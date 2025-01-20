@@ -117,7 +117,7 @@
     import {DynamicScroller, DynamicScrollerItem} from "vue-virtual-scroller";
     import "vue-virtual-scroller/dist/vue-virtual-scroller.css"
     import Collapse from "../layout/Collapse.vue";
-    import State from "../../utils/state";
+    import {State} from "@kestra-io/ui-libs"
     import Utils from "../../utils/utils";
     import LogLine from "../logs/LogLine.vue";
     import Restart from "./Restart.vue";
@@ -330,7 +330,7 @@
         }
 
         &::-webkit-scrollbar-thumb {
-            background: var(--ks-background-button-primary);
+            background: var(--ks-button-background-primary);
         }
     }
 

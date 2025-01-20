@@ -8,6 +8,7 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -61,12 +62,11 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
 public class Download extends AbstractHttp implements RunnableTask<Download.Output> {
     @Schema(title = "Should the task fail when downloading an empty file.")
     @Builder.Default
-    @PluginProperty
-    private final Boolean failOnEmptyResponse = true;
+    private final Property<Boolean> failOnEmptyResponse = Property.of(true);
 
     public Output run(RunContext runContext) throws Exception {
         Logger logger = runContext.logger();
-        URI from = new URI(runContext.render(this.uri));
+        URI from = new URI(runContext.render(this.uri).as(String.class).orElseThrow());
 
         File tempFile = runContext.workingDir().createTempFile(filenameFromURI(from)).toFile();
 
@@ -103,8 +103,8 @@ public class Download extends AbstractHttp implements RunnableTask<Download.Outp
             );
 
             if (size.get() == 0) {
-                if (this.failOnEmptyResponse) {
-                    boolean allowFailed = this.options != null ? this.options.getAllowFailed() : false;
+                if (runContext.render(this.failOnEmptyResponse).as(Boolean.class).orElseThrow()) {
+                    boolean allowFailed = this.options != null && runContext.render(this.options.getAllowFailed()).as(Boolean.class).orElseThrow();
                     if (!allowFailed) {
                         throw new HttpClientResponseException("No response from server", response);
                     }

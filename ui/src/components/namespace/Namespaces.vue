@@ -139,7 +139,7 @@
 </script>
 
 <style lang="scss" scoped>
-@import "../../styles/color-palette.scss";
+@import "@kestra-io/ui-libs/src/scss/color-palette.scss";
 
 .filter {
     min-width: 200px;

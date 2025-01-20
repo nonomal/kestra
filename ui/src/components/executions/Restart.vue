@@ -79,7 +79,7 @@
     import {mapState} from "vuex";
     import permission from "../../models/permission";
     import action from "../../models/action";
-    import State from "../../utils/state";
+    import {State} from "@kestra-io/ui-libs"
     import ExecutionUtils from "../../utils/executionUtils";
 
     export default {

@@ -56,7 +56,7 @@ public class CommandsWrapper implements TaskCommands {
     private String containerImage;
 
     @With
-    private TaskRunner taskRunner;
+    private TaskRunner<?> taskRunner;
 
     @With
     private DockerOptions dockerOptions;
@@ -131,7 +131,7 @@ public class CommandsWrapper implements TaskCommands {
         return this;
     }
 
-    public ScriptOutput run() throws Exception {
+    public <T extends TaskRunnerDetailResult> ScriptOutput run() throws Exception {
         if (this.namespaceFiles != null && !Boolean.FALSE.equals(runContext.render(this.namespaceFiles.getEnabled()).as(Boolean.class).orElse(true))) {
 
             List<NamespaceFile> matchedNamespaceFiles = runContext.storage()
@@ -147,7 +147,7 @@ public class CommandsWrapper implements TaskCommands {
                 }));
         }
 
-        TaskRunner realTaskRunner = this.getTaskRunner();
+        TaskRunner<T> realTaskRunner = this.getTaskRunner();
         if (this.inputFiles != null) {
             FilesService.inputFiles(runContext, realTaskRunner.additionalVars(runContext, this), this.inputFiles);
         }
@@ -157,17 +157,25 @@ public class CommandsWrapper implements TaskCommands {
         RunContext taskRunnerRunContext = initializer.forPlugin(((DefaultRunContext) runContext).clone(), realTaskRunner);
         this.commands = this.render(runContext, commands);
 
-        var outputBuilder = ScriptOutput.builder().warningOnStdErr(this.warningOnStdErr);
+        ScriptOutput.ScriptOutputBuilder scriptOutputBuilder = ScriptOutput.builder()
+            .warningOnStdErr(this.warningOnStdErr);
+
         try {
-            RunnerResult runnerResult = realTaskRunner.run(taskRunnerRunContext, this, this.outputFiles);
-            return outputBuilder.exitCode(runnerResult.getExitCode())
-                .stdOutLineCount(runnerResult.getLogConsumer().getStdOutCount())
-                .stdErrLineCount(runnerResult.getLogConsumer().getStdErrCount())
-                .vars(runnerResult.getLogConsumer().getOutputs())
+            TaskRunnerResult<T> taskRunnerResult = realTaskRunner.run(taskRunnerRunContext, this, this.outputFiles);
+            scriptOutputBuilder.exitCode(taskRunnerResult.getExitCode())
                 .outputFiles(getOutputFiles(taskRunnerRunContext))
-                .build();
+                .taskRunner(taskRunnerResult.getDetails());
+
+            if (taskRunnerResult.getLogConsumer() != null) {
+                scriptOutputBuilder
+                    .stdOutLineCount(taskRunnerResult.getLogConsumer().getStdOutCount())
+                    .stdErrLineCount(taskRunnerResult.getLogConsumer().getStdErrCount())
+                    .vars(taskRunnerResult.getLogConsumer().getOutputs());
+            }
+
+            return scriptOutputBuilder.build();
         } catch (TaskException e) {
-            var output = outputBuilder.exitCode(e.getExitCode())
+            var output = scriptOutputBuilder.exitCode(e.getExitCode())
                 .stdOutLineCount(e.getStdOutCount())
                 .stdErrLineCount(e.getStdErrCount())
                 .vars(e.getLogConsumer() != null ? e.getLogConsumer().getOutputs() : null)
@@ -189,20 +197,21 @@ public class CommandsWrapper implements TaskCommands {
         return outputFiles;
     }
 
-    public TaskRunner getTaskRunner() {
+    @SuppressWarnings("unchecked")
+    public <T extends TaskRunnerDetailResult> TaskRunner<T> getTaskRunner() {
         if (runnerType != null) {
             return switch (runnerType) {
-                case DOCKER -> Docker.from(dockerOptions);
-                case PROCESS -> new Process();
+                case DOCKER -> (TaskRunner<T>) Docker.from(dockerOptions);
+                case PROCESS -> (TaskRunner<T>) new Process();
             };
         }
 
         // special case to take into account the deprecated dockerOptions if set
         if (taskRunner instanceof Docker && dockerOptions != null) {
-            return Docker.from(dockerOptions);
+            return (TaskRunner<T>) Docker.from(dockerOptions);
         }
 
-        return taskRunner;
+        return (TaskRunner<T>) taskRunner;
     }
 
     public Boolean getEnableOutputDirectory() {
@@ -226,7 +235,7 @@ public class CommandsWrapper implements TaskCommands {
     }
 
     public String render(RunContext runContext, String command, List<String> internalStorageLocalFiles) throws IllegalVariableEvaluationException, IOException {
-        TaskRunner taskRunner = this.getTaskRunner();
+        TaskRunner<?> taskRunner = this.getTaskRunner();
         return ScriptService.replaceInternalStorage(
             this.runContext,
             taskRunner.additionalVars(runContext, this),
@@ -236,7 +245,7 @@ public class CommandsWrapper implements TaskCommands {
     }
 
     public List<String> render(RunContext runContext, List<String> commands) throws IllegalVariableEvaluationException, IOException {
-        TaskRunner taskRunner = this.getTaskRunner();
+        TaskRunner<?> taskRunner = this.getTaskRunner();
         return ScriptService.replaceInternalStorage(
             this.runContext,
             taskRunner.additionalVars(runContext, this),

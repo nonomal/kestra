@@ -150,13 +150,13 @@
     import ChevronDown from "vue-material-design-icons/ChevronDown.vue";
     import Clock from "vue-material-design-icons/Clock.vue";
     import Outputs from "./Outputs.vue";
-    import State from "../../utils/state";
+    import {State} from "@kestra-io/ui-libs"
     import FlowUtils from "../../utils/flowUtils";
     import {mapState} from "vuex";
     import {SECTIONS} from "../../utils/constants";
     import Download from "vue-material-design-icons/Download.vue";
     import _groupBy from "lodash/groupBy";
-    import TaskIcon from "@kestra-io/ui-libs/src/components/misc/TaskIcon.vue";
+    import {TaskIcon} from "@kestra-io/ui-libs";
     import Duration from "../layout/Duration.vue";
     import Utils from "../../utils/utils";
     import Delete from "vue-material-design-icons/Delete.vue";
@@ -378,7 +378,7 @@
             padding: .5rem;
             height: 100%;
             border: 1px solid rgba($white, .05);
-            background-color: var(--ks-background-button-secondary) !important;
+            background-color: var(--ks-button-background-secondary) !important;
             // FIXME: what does this mean?
             &:not(:hover) {
                 background: rgba($white, .10);

@@ -85,7 +85,7 @@
     .shortcut {
         font-size: 0.75rem;
         line-height: 1.25rem;
-        gap: calc(var(--spacer) / 4);
+        gap: .25rem;
     }
 
     .el-input {

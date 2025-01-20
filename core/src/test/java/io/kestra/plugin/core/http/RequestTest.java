@@ -3,9 +3,11 @@ package io.kestra.plugin.core.http;
 import com.devskiller.friendly_id.FriendlyId;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
+import io.kestra.core.http.client.HttpClientRequestException;
 import io.kestra.core.http.client.HttpClientResponseException;
 import io.kestra.core.http.client.configurations.*;
 import io.kestra.core.junit.annotations.KestraTest;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.serializers.JacksonMapper;
@@ -13,6 +15,7 @@ import io.kestra.core.storages.StorageInterface;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
 import io.micronaut.context.ApplicationContext;
+import io.micronaut.context.env.Environment;
 import io.micronaut.http.*;
 import io.micronaut.http.annotation.*;
 import io.micronaut.http.multipart.StreamingFileUpload;
@@ -56,7 +59,7 @@ class RequestTest {
             Request task = Request.builder()
                 .id(RequestTest.class.getSimpleName())
                 .type(RequestTest.class.getName())
-                .uri(server.getURL().toString() + "/hello")
+                .uri(Property.of(server.getURL().toString() + "/hello"))
                 .build();
 
             RunContext runContext = TestsUtils.mockRunContext(this.runContextFactory, task, ImmutableMap.of());
@@ -76,8 +79,8 @@ class RequestTest {
         Request task = Request.builder()
             .id(RequestTest.class.getSimpleName())
             .type(RequestTest.class.getName())
-            .uri(url)
-            .method("HEAD")
+            .uri(Property.of(url))
+            .method(Property.of("HEAD"))
             .build();
 
         RunContext runContext = TestsUtils.mockRunContext(this.runContextFactory, task, ImmutableMap.of());
@@ -98,7 +101,7 @@ class RequestTest {
             Request task = Request.builder()
                 .id(RequestTest.class.getSimpleName())
                 .type(RequestTest.class.getName())
-                .uri(server.getURL().toString() + "/redirect")
+                .uri(Property.of(server.getURL().toString() + "/redirect"))
                 .build();
 
             RunContext runContext = TestsUtils.mockRunContext(this.runContextFactory, task, ImmutableMap.of());
@@ -120,9 +123,9 @@ class RequestTest {
             Request task = Request.builder()
                 .id(RequestTest.class.getSimpleName())
                 .type(RequestTest.class.getName())
-                .uri(server.getURL().toString() + "/redirect")
+                .uri(Property.of(server.getURL().toString() + "/redirect"))
                 .options(HttpConfiguration.builder()
-                    .followRedirects(false)
+                    .followRedirects(Property.of(false))
                     .build()
                 )
                 .build();
@@ -145,9 +148,9 @@ class RequestTest {
             Request task = Request.builder()
                 .id(RequestTest.class.getSimpleName())
                 .type(RequestTest.class.getName())
-                .uri(server.getURL().toString() + "/hello417")
+                .uri(Property.of(server.getURL().toString() + "/hello417"))
                 .options(HttpConfiguration.builder()
-                    .allowFailed(true)
+                    .allowFailed(Property.of(true))
                     .build()
                 )
                 .build();
@@ -171,7 +174,7 @@ class RequestTest {
             Request task = Request.builder()
                 .id(RequestTest.class.getSimpleName())
                 .type(RequestTest.class.getName())
-                .uri(server.getURL().toString() + "/hello417")
+                .uri(Property.of(server.getURL().toString() + "/hello417"))
                 .build();
 
             RunContext runContext = TestsUtils.mockRunContext(this.runContextFactory, task, ImmutableMap.of());
@@ -187,28 +190,58 @@ class RequestTest {
 
     @Test
     void selfSigned() throws Exception {
-        final String url = "https://self-signed.badssl.com/";
+        try (
+            ApplicationContext applicationContext = ApplicationContext.run(Environment.TEST, "testssl");
+            EmbeddedServer server = applicationContext.getBean(EmbeddedServer.class).start();
 
-        Request task = Request.builder()
-            .id(RequestTest.class.getSimpleName())
-            .type(RequestTest.class.getName())
-            .uri(url)
-            .headers(Map.of("bla", "sdfsdf"))
-            .options(HttpConfiguration.builder()
-                .allowFailed(true)
-                .timeout(TimeoutConfiguration.builder().readIdleTimeout(Duration.ofSeconds(30)).build())
-                .ssl(SslOptions.builder().insecureTrustAllCertificates(true).build())
-                .build()
-            )
-            .build();
+        ) {
+            Request task = Request.builder()
+                .id(RequestTest.class.getSimpleName())
+                .type(RequestTest.class.getName())
+                .uri(Property.of(server.getURL().toString() + "/hello"))
+                .options(HttpConfiguration.builder()
+                    .timeout(TimeoutConfiguration.builder().readIdleTimeout(Property.of(Duration.ofSeconds(30))).build())
+                    .ssl(SslOptions.builder().insecureTrustAllCertificates(Property.of(true)).build())
+                    .build()
+                )
+                .build();
 
-        RunContext runContext = TestsUtils.mockRunContext(this.runContextFactory, task, ImmutableMap.of());
+            RunContext runContext = TestsUtils.mockRunContext(this.runContextFactory, task, ImmutableMap.of());
 
-        Request.Output output = task.run(runContext);
+            Request.Output output = task.run(runContext);
 
-        assertThat(output.getUri(), is(URI.create(url)));
-        assertThat((String) output.getBody(), containsString("self-signed.<br>badssl.com"));
-        assertThat(output.getCode(), is(200));
+            assertThat(output.getBody(), is("{ \"hello\": \"world\" }"));
+            assertThat(output.getCode(), is(200));
+        }
+    }
+
+    @Test
+    void selfSignedFailed() {
+        try (
+            ApplicationContext applicationContext = ApplicationContext.run(Environment.TEST, "testssl");
+            EmbeddedServer server = applicationContext.getBean(EmbeddedServer.class).start();
+
+        ) {
+            Request task = Request.builder()
+                .id(RequestTest.class.getSimpleName())
+                .type(RequestTest.class.getName())
+                .uri(Property.of(server.getURL().toString() + "/hello"))
+                .options(HttpConfiguration.builder()
+                    .allowFailed(Property.of(true))
+                    .timeout(TimeoutConfiguration.builder().readIdleTimeout(Property.of(Duration.ofSeconds(30))).build())
+                    .build()
+                )
+                .build();
+
+            RunContext runContext = TestsUtils.mockRunContext(this.runContextFactory, task, ImmutableMap.of());
+
+            HttpClientRequestException exception = assertThrows(
+                HttpClientRequestException.class,
+                () -> task.run(runContext)
+            );
+
+            assertThat(exception.getMessage(), containsString("unable to find valid certification path"));
+        }
     }
 
     @Test
@@ -221,9 +254,9 @@ class RequestTest {
             Request task = Request.builder()
                 .id(RequestTest.class.getSimpleName())
                 .type(RequestTest.class.getName())
-                .method("POST")
-                .uri(server.getURL().toString() + "/post/json")
-                .body(JacksonMapper.ofJson().writeValueAsString(ImmutableMap.of("hello", "world")))
+                .method(Property.of("POST"))
+                .uri(Property.of(server.getURL().toString() + "/post/json"))
+                .body(Property.of(JacksonMapper.ofJson().writeValueAsString(ImmutableMap.of("hello", "world"))))
                 .build();
 
             RunContext runContext = TestsUtils.mockRunContext(this.runContextFactory, task, Map.of());
@@ -245,13 +278,13 @@ class RequestTest {
             Request task = Request.builder()
                 .id(RequestTest.class.getSimpleName())
                 .type(RequestTest.class.getName())
-                .method("POST")
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .uri(server.getURL().toString() + "/post/url-encoded")
-                .headers(ImmutableMap.of(
+                .method(Property.of("POST"))
+                .contentType(Property.of(MediaType.APPLICATION_FORM_URLENCODED))
+                .uri(Property.of(server.getURL().toString() + "/post/url-encoded"))
+                .headers(Property.of(Map.of(
                     "test", "{{ inputs.test }}"
-                ))
-                .formData(ImmutableMap.of("hello", "world"))
+                )))
+                .formData(Property.of(ImmutableMap.of("hello", "world")))
                 .build();
 
 
@@ -285,10 +318,10 @@ class RequestTest {
             Request task = Request.builder()
                 .id(RequestTest.class.getSimpleName())
                 .type(RequestTest.class.getName())
-                .method("POST")
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .uri(server.getURL().toString() + "/post/multipart")
-                .formData(ImmutableMap.of("hello", "world", "file", fileStorage.toString()))
+                .method(Property.of("POST"))
+                .contentType(Property.of(MediaType.MULTIPART_FORM_DATA))
+                .uri(Property.of(server.getURL().toString() + "/post/multipart"))
+                .formData(Property.of(ImmutableMap.of("hello", "world", "file", fileStorage.toString())))
                 .build();
 
             RunContext runContext = TestsUtils.mockRunContext(this.runContextFactory, task, ImmutableMap.of());
@@ -319,10 +352,10 @@ class RequestTest {
             Request task = Request.builder()
                 .id(RequestTest.class.getSimpleName())
                 .type(RequestTest.class.getName())
-                .method("POST")
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .uri(server.getURL().toString() + "/post/multipart")
-                .formData(ImmutableMap.of("hello", "world", "file", ImmutableMap.of("content", fileStorage.toString(), "name", "test.yml")))
+                .method(Property.of("POST"))
+                .contentType(Property.of(MediaType.MULTIPART_FORM_DATA))
+                .uri(Property.of(server.getURL().toString() + "/post/multipart"))
+                .formData(Property.of(ImmutableMap.of("hello", "world", "file", ImmutableMap.of("content", fileStorage.toString(), "name", "test.yml"))))
                 .build();
 
             RunContext runContext = TestsUtils.mockRunContext(this.runContextFactory, task, ImmutableMap.of());
@@ -344,8 +377,8 @@ class RequestTest {
             Request task = Request.builder()
                 .id(RequestTest.class.getSimpleName())
                 .type(RequestTest.class.getName())
-                .uri(server.getURL().toString() + "/hello")
-                .encryptBody(true)
+                .uri(Property.of(server.getURL().toString() + "/hello"))
+                .encryptBody(Property.of(true))
                 .build();
 
             RunContext runContext = TestsUtils.mockRunContext(this.runContextFactory, task, ImmutableMap.of());
@@ -364,8 +397,8 @@ class RequestTest {
         Request task = Request.builder()
             .id(RequestTest.class.getSimpleName())
             .type(RequestTest.class.getName())
-            .uri("https://github.com/kestra-io.png")
-            .contentType("application/octet-stream")
+            .uri(Property.of("https://github.com/kestra-io.png"))
+            .contentType(Property.of("application/octet-stream"))
             .build();
 
         RunContext runContext = TestsUtils.mockRunContext(this.runContextFactory, task, ImmutableMap.of());
@@ -387,9 +420,10 @@ class RequestTest {
             Request task = Request.builder()
                 .id(RequestTest.class.getSimpleName())
                 .type(RequestTest.class.getName())
-                .uri(server.getURL().toString() + "/auth/basic")
+                .uri(Property.of(server.getURL().toString() + "/auth/basic"))
                 .options(HttpConfiguration.builder()
-                    .auth(BasicAuthConfiguration.builder().username("John").password("p4ss").build())
+                    .auth(BasicAuthConfiguration.builder().username(Property.of("John"))
+                        .password(Property.of("p4ss")).build())
                     .build()
                 )
                 .build();
@@ -414,9 +448,9 @@ class RequestTest {
             Request task = Request.builder()
                 .id(RequestTest.class.getSimpleName())
                 .type(RequestTest.class.getName())
-                .uri(server.getURL().toString() + "/auth/bearer")
+                .uri(Property.of(server.getURL().toString() + "/auth/bearer"))
                 .options(HttpConfiguration.builder()
-                    .auth(BearerAuthConfiguration.builder().token(id).build())
+                    .auth(BearerAuthConfiguration.builder().token(Property.of(id)).build())
                     .build()
                 )
                 .build();

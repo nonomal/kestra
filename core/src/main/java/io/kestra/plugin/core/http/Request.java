@@ -1,11 +1,13 @@
 package io.kestra.plugin.core.http;
 
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.http.HttpRequest;
 import io.kestra.core.http.HttpResponse;
 import io.kestra.core.http.client.HttpClient;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.common.EncryptedString;
 import io.kestra.core.runners.RunContext;
@@ -280,7 +282,7 @@ public class Request extends AbstractHttp implements RunnableTask<Request.Output
         title = "If true, the HTTP response body will be automatically encrypted and decrypted in the outputs, provided that encryption is configured in your Kestra configuration.",
         description = "If this property is set to `true`, this task will output the request body using the `encryptedBody` output property; otherwise, the request body will be stored in the `body` output property."
     )
-    private boolean encryptBody = false;
+    private Property<Boolean> encryptBody = Property.of(false);
 
     public Output run(RunContext runContext) throws Exception {
         try (HttpClient client = this.client(runContext)) {
@@ -308,13 +310,14 @@ public class Request extends AbstractHttp implements RunnableTask<Request.Output
         }
     }
 
-    public Output output(RunContext runContext, HttpRequest request, HttpResponse<Byte[]> response, String body) throws GeneralSecurityException, URISyntaxException, IOException {
+    public Output output(RunContext runContext, HttpRequest request, HttpResponse<Byte[]> response, String body) throws GeneralSecurityException, URISyntaxException, IOException, IllegalVariableEvaluationException {
+        boolean encrypt = runContext.render(this.encryptBody).as(Boolean.class).orElseThrow();
         return Output.builder()
             .code(response.getStatus().getCode())
             .headers(response.getHeaders().map())
             .uri(request.getUri())
-            .body(encryptBody ? null : body)
-            .encryptedBody(encryptBody ? EncryptedString.from(body, runContext) : null)
+            .body(encrypt ? null : body)
+            .encryptedBody(encrypt ? EncryptedString.from(body, runContext) : null)
             .build();
     }
 

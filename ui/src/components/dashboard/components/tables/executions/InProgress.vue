@@ -130,7 +130,7 @@
 
     import moment from "moment";
 
-    import State from "../../../../../utils/state.js"
+    import {State} from "@kestra-io/ui-libs";
 
     import Status from "../../../../Status.vue";
     import NoData from "../../../../layout/NoData.vue";

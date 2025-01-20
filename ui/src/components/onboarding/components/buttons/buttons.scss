@@ -1,8 +1,8 @@
-:deep(.main) {
+.main {
     padding: 1rem 2rem;
 }
 
-:deep(.alternative) {
+.alternative {
     background: var(--ks-background-card);
 
     &:hover {
@@ -12,10 +12,10 @@
     }
 }
 
-:deep(.high) {
+.high {
     height: 50px;
 }
 
-:deep(.full) {
+.full {
     width: 100%;
 }

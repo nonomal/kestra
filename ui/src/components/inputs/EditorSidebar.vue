@@ -1077,11 +1077,11 @@
     }
 
     &::-webkit-scrollbar-thumb {
-        background: var(--ks-background-button-primary);
+        background: var(--ks-button-background-primary);
         border-radius: 5px;
 
         html.dark & {
-            background:  var(--ks-background-button-primary);
+            background:  var(--ks-button-background-primary);
         }
     }
 
@@ -1098,7 +1098,7 @@
 </style>
 
 <style lang="scss" scoped>
-@import "@kestra-io/ui-libs/src/scss/variables.scss";
+@import "@kestra-io/ui-libs/src/scss/variables";
 
 .sidebar {
     background: var(--ks-background-card);
